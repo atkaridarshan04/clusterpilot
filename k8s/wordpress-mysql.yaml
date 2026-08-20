@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-pass
+type: Opaque
+stringData:
+  password: "wordpress-demo-password"
+---
+# Neither pod talks to the k8s API, so least-privilege here just means no
+# permissions at all: no Role/RoleBinding, default SA token not mounted.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mysql
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wordpress
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  clusterIP: None
+  ports:
+    - port: 3306
+  selector:
+    app: wordpress
+    tier: mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      serviceAccountName: mysql
+      # blocks syscalls outside the runtime's default allowed set
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          securityContext:
+            allowPrivilegeEscalation: false
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass
+                  key: password
+            - name: MYSQL_DATABASE
+              value: wordpress
+          ports:
+            - containerPort: 3306
+              name: mysql
+          resources:
+            requests:
+              # mysqld's steady-state footprint is close to 450Mi - size the
+              # request to match, or the scheduler/cluster-autoscaler
+              # under-count this pod when bin-packing nodes.
+              cpu: 250m
+              memory: 450Mi
+            limits:
+              cpu: 500m
+              memory: 600Mi
+          livenessProbe:
+            tcpSocket:
+              port: mysql
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: mysql
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-persistent-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 2Gi
+
+# PVC commented out, not deleted: a single ReadWriteOnce EBS volume can't be
+# shared across wordpress replicas once they land on different nodes (which
+# is the whole point of the HPA below) - "Multi-Attach error" otherwise.
+# Re-enable (and re-add the volumeMounts/volumes below) if this moves to a
+# ReadWriteMany backend like EFS.
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: wp-pv-claim
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   storageClassName: gp3
+#   resources:
+#     requests:
+#       storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+  selector:
+    app: wordpress
+    tier: frontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+spec:
+  # replicas intentionally omitted - the HPA in policies.yaml owns this field
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: frontend
+  # RollingUpdate, not Recreate - Recreate was only needed to serialize
+  # around the old shared RWO PVC (now dropped). maxUnavailable: 1 keeps
+  # this in line with the PDB's minAvailable: 1 in policies.yaml.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      serviceAccountName: wordpress
+      # blocks syscalls outside the runtime's default allowed set
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: wordpress
+          image: wordpress:6-apache
+          securityContext:
+            allowPrivilegeEscalation: false
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: mysql
+            - name: WORDPRESS_DB_USER
+              value: root
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass
+                  key: password
+          ports:
+            - containerPort: 80
+              name: wordpress
+          resources:
+            requests:
+              # sized with headroom above the idle/probe-driven floor
+              # (~90-110m) so the HPA's 70% target tracks real user load,
+              # not just the app existing and being probed.
+              cpu: 200m
+              memory: 150Mi
+            limits:
+              cpu: 400m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: wordpress
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: wordpress
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+          # volumeMounts: no PVC to mount - see the commented-out
+          # PersistentVolumeClaim above for why.
+          # volumeMounts:
+          #   - name: wordpress-persistent-storage
+          #     mountPath: /var/www/html
+      # volumes:
+      #   - name: wordpress-persistent-storage
+      #     persistentVolumeClaim:
+      #       claimName: wp-pv-claim

@@ -1,0 +1,99 @@
+# Cross-cutting policy for the wordpress-mysql app: autoscaling, disruption
+# budgets, and network segmentation. Split out from wordpress-mysql.yaml
+# since these apply to the app rather than define it.
+
+# HPA requires metrics-server in-cluster
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wordpress
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wordpress
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  # default scale-down stabilization is 5min - shortened for faster
+  # feedback while testing. Tradeoff: less protection against flapping on
+  # noisy/bursty metrics, which is exactly what the 5min default guards
+  # against - fine for a demo app, reconsider before treating as prod.
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wordpress
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: frontend
+# mysql has no PDB: it's a single-replica StatefulSet, so minAvailable: 1
+# would just block every voluntary eviction (node drains, upgrades) forever.
+
+---
+# Deny-by-default, then allow only the paths this app actually needs.
+#
+# NOTE: EKS's default VPC CNI does not enforce NetworkPolicy out of the box -
+# it needs network policy enforcement enabled on the vpc-cni addon (or a
+# policy engine like Calico) before these rules actually take effect.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-wordpress-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: wordpress
+      tier: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    # ALB target-type is "ip", so it hits pod IPs directly rather than
+    # going through a Service/kube-proxy - no in-cluster "from" to name.
+    - ports:
+        - port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mysql-from-wordpress
+spec:
+  podSelector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: wordpress
+              tier: frontend
+      ports:
+        - port: 3306

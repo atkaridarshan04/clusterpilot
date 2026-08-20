@@ -1,0 +1,101 @@
+# kubernetes-event-exporter: watches the Events API and re-emits every
+# event to its own stdout. Needs no AWS permissions of its own - the
+# Fluent Bit daemonset from the amazon-cloudwatch-observability addon
+# (terraform/modules/cloudwatch-observability) already tails every pod's
+# stdout cluster-wide and ships it to CloudWatch Logs, so this rides that
+# pipe instead of talking to AWS directly. Why this exists at all: etcd
+# only keeps Events for ~1h, so without something exporting them first,
+# "a node got drained, then a new one joined" is unanswerable an hour
+# later - the live k8s API has nothing left to show.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: event-exporter
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: event-exporter
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: event-exporter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: event-exporter
+subjects:
+  - kind: ServiceAccount
+    name: event-exporter
+    namespace: kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: event-exporter-cfg
+  namespace: kube-system
+data:
+  config.yaml: |
+    logLevel: warn
+    logFormat: json
+    route:
+      routes:
+        - match:
+            - receiver: "stdout"
+    receivers:
+      - name: "stdout"
+        stdout: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-exporter
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: event-exporter
+  template:
+    metadata:
+      labels:
+        app: event-exporter
+    spec:
+      serviceAccountName: event-exporter
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: event-exporter
+          image: ghcr.io/resmoio/kubernetes-event-exporter:v1.7
+          args: ["-conf=/data/config.yaml"]
+          # starting guess for a low-throughput event forwarder, not
+          # measured yet - check `kubectl top pod -n kube-system -l app=event-exporter`
+          # once deployed and adjust.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: cfg
+              mountPath: /data
+      volumes:
+        - name: cfg
+          configMap:
+            name: event-exporter-cfg
