@@ -132,6 +132,18 @@ private repo) - be deliberate about which `action` you dispatch.
 | `destroy` | Destroys `dns-record` first, then deletes the Ingress and waits for the real ALB to disappear before destroying everything else - Terraform has no visibility into the ALB itself, so this can't be expressed as a dependency. See [`docs/concepts/alb-networking-and-network-policy.md`](docs/concepts/alb-networking-and-network-policy.md). |
 | `dns-record-apply` | Its own action rather than auto-chained after `apply` - the ALB is provisioned asynchronously, so there's no reliable point mid-run to know it exists yet. Run it once `kubectl get ingress app` shows an `ADDRESS`. |
 
+![plan job succeeding in the Actions UI](docs/assets/tf-ci-plan.png)
+![apply job succeeding in the Actions UI](docs/assets/tf-ci-apply.png)
+![dns-record-apply job succeeding in the Actions UI](docs/assets/tf-ci-dns-apply.png)
+
+Now access the site at `https://<your-domain>` (`local.domain_name` in `terraform/locals.tf`) -
+HTTPS via the ACM cert `terraform/modules/dns` provisions, served through
+the ALB the ingress controller creates:
+
+![WordPress served through the ALB, at the domain terraform/dns-record wires up](docs/assets/app.png)
+
+After you're done, tear it down by re-running the same workflow with the `destroy` action instead.
+
 ### Lint workflow
 
 Runs `fmt -check`/`validate`, `tflint` (provider-specific correctness), and
@@ -142,6 +154,8 @@ The `checkov` job also uploads its findings as SARIF to the repo's
 for what each check actually catches and how the SARIF upload works, and
 `terraform/README.md`'s "Local checks" section to run all three yourself
 before pushing.
+
+![fmt-and-validate, tflint, and checkov all passing in the Actions UI](docs/assets/tf-ci-lint.png)
 
 ## Working with the agent
 

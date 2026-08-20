@@ -178,8 +178,15 @@ jobs:
       # so Terraform can't wait for them. Deleting the Ingress first and
       # confirming all three are gone avoids leaving orphans that block
       # subnet/IGW/VPC deletion. See docs/concepts/alb-networking-and-network-policy.md.
+      # -refresh=false: refreshing kubectl_manifest.ingress fails with "the
+      # server has asked for the client to provide credentials" - isolated
+      # to the alekc/kubectl provider's own read path specifically (not a
+      # token/access-entry problem: the helm/kubernetes providers, given
+      # the exact same host/token, read the cluster fine moments earlier
+      # in the same run). Skipping refresh avoids that read entirely and
+      # goes straight to the delete call, which works.
       - name: terraform destroy (ingress first)
-        run: terraform destroy -auto-approve -target=kubectl_manifest.ingress
+        run: terraform destroy -auto-approve -refresh=false -target=kubectl_manifest.ingress
 
       - name: wait for the ALB controller to finish cleaning up
         run: |

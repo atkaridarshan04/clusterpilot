@@ -212,6 +212,25 @@ kubectl get nodes
 Works immediately - `enable_cluster_creator_admin_permissions = true` grants
 whoever ran `apply` cluster-admin via an access entry.
 
+If `apply` ran as someone/something else (e.g. CI) and kubectl fails with
+`error: You must be logged in to the server (the server has asked for the
+client to provide credentials)`, grant your own IAM user/role an access
+entry directly:
+```bash
+aws eks create-access-entry --cluster-name clusterpilot \
+  --principal-arn <your IAM user/role ARN> --type STANDARD
+aws eks associate-access-policy --cluster-name clusterpilot \
+  --principal-arn <your IAM user/role ARN> \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
+  --access-scope type=cluster
+```
+Then confirm access:
+```bash
+kubectl get nodes
+kubectl get pods -A
+kubectl get ingress
+```
+
 ## 4. The bastion
 
 `modules/bastion` is a plain SSH box in a public subnet, `kubectl` installed
