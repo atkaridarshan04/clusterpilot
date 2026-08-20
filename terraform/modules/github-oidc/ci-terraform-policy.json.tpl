@@ -25,34 +25,7 @@
     {
       "Sid": "IamForProjectScopedRoles",
       "Effect": "Allow",
-      "Action": [
-        "iam:CreateRole",
-        "iam:DeleteRole",
-        "iam:GetRole",
-        "iam:TagRole",
-        "iam:UntagRole",
-        "iam:UpdateAssumeRolePolicy",
-        "iam:PutRolePolicy",
-        "iam:DeleteRolePolicy",
-        "iam:GetRolePolicy",
-        "iam:AttachRolePolicy",
-        "iam:DetachRolePolicy",
-        "iam:ListAttachedRolePolicies",
-        "iam:ListRolePolicies",
-        "iam:ListInstanceProfilesForRole",
-        "iam:CreateInstanceProfile",
-        "iam:DeleteInstanceProfile",
-        "iam:AddRoleToInstanceProfile",
-        "iam:RemoveRoleFromInstanceProfile",
-        "iam:GetInstanceProfile",
-        "iam:PassRole",
-        "iam:CreatePolicy",
-        "iam:DeletePolicy",
-        "iam:CreatePolicyVersion",
-        "iam:DeletePolicyVersion",
-        "iam:ListPolicyVersions",
-        "iam:TagPolicy"
-      ],
+      "Action": "iam:*",
       "Resource": [
         "arn:aws:iam::*:role/${name}*",
         "arn:aws:iam::*:instance-profile/${name}*",
@@ -60,21 +33,10 @@
       ]
     },
     {
-      "Sid": "EksNodegroupServiceLinkedRoleRead",
+      "Sid": "ServiceLinkedRolesForServicesThisConfigUses",
       "Effect": "Allow",
-      "Action": "iam:GetRole",
-      "Resource": "arn:aws:iam::*:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
-    },
-    {
-      "Sid": "EksNodegroupServiceLinkedRoleCreate",
-      "Effect": "Allow",
-      "Action": "iam:CreateServiceLinkedRole",
-      "Resource": "*",
-      "Condition": {
-        "StringLike": {
-          "iam:AWSServiceName": "eks-nodegroup.amazonaws.com"
-        }
-      }
+      "Action": "iam:*",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/*"
     },
     {
       "Sid": "IamReadOnAnyPolicy",
@@ -88,13 +50,7 @@
     {
       "Sid": "TerraformStateBucket",
       "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject",
-        "s3:ListBucket",
-        "s3:GetBucketVersioning"
-      ],
+      "Action": "s3:*",
       "Resource": [
         "${state_bucket_arn}",
         "${state_bucket_arn}/*"

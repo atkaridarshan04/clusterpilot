@@ -38,7 +38,7 @@ module "eks" {
   control_plane_subnet_ids = var.control_plane_subnet_ids
 
   eks_managed_node_groups = {
-    "${var.cluster_name}" = {
+    (var.cluster_name) = {
       ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = var.node_instance_types
 
