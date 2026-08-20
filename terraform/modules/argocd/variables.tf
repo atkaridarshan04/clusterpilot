@@ -1,0 +1,27 @@
+variable "repo_url" {
+  description = "HTTPS git URL ArgoCD pulls manifests from (not an SSH host alias - the repo-server runs inside the cluster and can't see your local ~/.ssh/config)"
+  type        = string
+}
+
+variable "repo_path" {
+  description = "Path within the repo containing the manifests to sync"
+  type        = string
+}
+
+variable "repo_revision" {
+  description = "Git branch/tag ArgoCD tracks"
+  type        = string
+  default     = "main"
+}
+
+variable "repo_token" {
+  description = "GitHub PAT for cloning repo_url - stored as a k8s Secret, never in a manifest. Only needed if repo_url is private, see root variables.tf"
+  type        = string
+  sensitive   = true
+}
+
+variable "admin_password_bcrypt_hash" {
+  description = "bcrypt hash of the ArgoCD admin password (generate with: htpasswd -nbBC 10 \"\" <password>, then drop the leading colon)"
+  type        = string
+  sensitive   = true
+}

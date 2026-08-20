@@ -1,0 +1,13 @@
+# Only repo-wide policy calls go here - a check that doesn't apply to this
+# repo's conventions, full stop, regardless of which resource trips it.
+# Exceptions tied to one specific resource (e.g. the bastion's open SSH
+# ingress/egress, its public IP, container-insights log retention/KMS) stay
+# as inline `#checkov:skip=...` comments on that resource instead, so a
+# future unrelated resource that trips the same check still gets caught.
+
+# CKV_TF_1: module sources are pinned by semver constraint (see providers.tf's
+# required_providers convention), not git+commit-hash - that's the standard,
+# supported way to consume Terraform Registry modules (vpc, eks), so this
+# check doesn't apply to this repo's module sourcing convention.
+skip-check:
+  - CKV_TF_1

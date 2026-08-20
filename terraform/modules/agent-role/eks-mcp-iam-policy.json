@@ -1,0 +1,28 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "eks:DescribeCluster",
+        "eks:DescribeInsight",
+        "eks:ListInsights",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeRouteTables",
+        "cloudformation:DescribeStacks",
+        "cloudwatch:GetMetricData",
+        "logs:StartQuery",
+        "logs:GetQueryResults",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "eks-mcpserver:QueryKnowledgeBase"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
