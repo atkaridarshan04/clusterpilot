@@ -1,0 +1,221 @@
+name: terraform infra (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to run"
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+          - dns-record-apply
+        default: plan
+
+concurrency:
+  group: terraform-infra
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # required to mint the OIDC token for aws-actions/configure-aws-credentials
+  contents: read
+
+jobs:
+  # Repo secrets used by every job below (Settings -> Secrets and variables
+  # -> Actions): SSH_PUBLIC_KEY, the bastion's public key; ARGOCD_REPO_TOKEN,
+  # a GitHub PAT (only actually needed if your fork is private). See
+  # terraform/README.md's "One-time repo setup".
+  plan:
+    if: inputs.action == 'plan'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.10.0"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - run: terraform init
+
+      - name: set tfvars
+        run: |
+          {
+            echo "TF_VAR_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+            echo "TF_VAR_argocd_repo_token=${{ secrets.ARGOCD_REPO_TOKEN }}"
+          } >> "$GITHUB_ENV"
+
+      # Cold-start bootstrap, no-op after the cluster exists (same fix
+      # applied in the apply job below) - see
+      # docs/concepts/eks-cluster-bootstrapping.md.
+      - name: terraform plan (vpc + eks layer)
+        run: |
+          terraform plan -target=module.vpc -target=module.eks -out=tfplan-vpc-eks
+          {
+            echo '### plan: vpc + eks layer'
+            echo '```'
+            terraform show -no-color tfplan-vpc-eks
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # On a from-scratch account, this step can never succeed - the
+      # kubectl/argocd provider needs module.eks's outputs to be real, and
+      # `plan` never applies anything, so they never resolve. Not a bug -
+      # see docs/concepts/eks-cluster-bootstrapping.md. Only *that*
+      # specific, known error is tolerated here - anything else still
+      # fails the job for real.
+      - name: terraform plan (everything)
+        run: |
+          if terraform plan -out=tfplan -no-color 2> >(tee plan.err >&2); then
+            {
+              echo '### plan: everything'
+              echo '```'
+              terraform show -no-color tfplan
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif grep -q 'invalid provider configuration' plan.err && grep -q 'kubectl' plan.err; then
+            echo '### plan: everything' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Skipped - the kubectl/argocd provider needs a real EKS cluster, and `plan` never applies one. Expected on a from-scratch account, not a bug (see docs/concepts/eks-cluster-bootstrapping.md). Run the `apply` action first to create the cluster, then re-run `plan`.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            exit 1
+          fi
+
+  apply:
+    if: inputs.action == 'apply'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.10.0"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - run: terraform init
+
+      - name: set tfvars
+        run: |
+          {
+            echo "TF_VAR_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+            echo "TF_VAR_argocd_repo_token=${{ secrets.ARGOCD_REPO_TOKEN }}"
+          } >> "$GITHUB_ENV"
+
+      - name: terraform plan (vpc + eks layer)
+        run: |
+          terraform plan -target=module.vpc -target=module.eks -out=tfplan-vpc-eks
+          {
+            echo '### plan: vpc + eks layer'
+            echo '```'
+            terraform show -no-color tfplan-vpc-eks
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: terraform apply (vpc + eks layer)
+        run: terraform apply tfplan-vpc-eks
+
+      - name: terraform apply (everything else)
+        run: terraform apply -auto-approve
+
+  destroy:
+    if: inputs.action == 'destroy'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.10.0"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - run: terraform init
+
+      - name: set tfvars
+        run: |
+          {
+            echo "TF_VAR_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+            echo "TF_VAR_argocd_repo_token=${{ secrets.ARGOCD_REPO_TOKEN }}"
+          } >> "$GITHUB_ENV"
+
+      # dns-record destroy has no race to wait on - deleting an existing
+      # record doesn't need to wait for anything, so it's safe to run
+      # before the main destroy, same order as the manual steps in README.md.
+      - name: dns-record init
+        working-directory: terraform/dns-record
+        run: terraform init
+
+      - name: dns-record destroy
+        working-directory: terraform/dns-record
+        run: terraform destroy -auto-approve
+
+      # The ALB, and the two security groups the controller manages
+      # alongside it (k8s-<ns>-<ingress>-* for the ALB itself,
+      # k8s-traffic-<cluster>-* for the shared backend-traffic SG), aren't
+      # Terraform resources - the controller creates all three dynamically,
+      # so Terraform can't wait for them. Deleting the Ingress first and
+      # confirming all three are gone avoids leaving orphans that block
+      # subnet/IGW/VPC deletion. See docs/concepts/alb-networking-and-network-policy.md.
+      - name: terraform destroy (ingress first)
+        run: terraform destroy -auto-approve -target=kubectl_manifest.ingress
+
+      - name: wait for the ALB controller to finish cleaning up
+        run: |
+          until [ "$(aws elbv2 describe-load-balancers \
+            --query "length(LoadBalancers[?contains(LoadBalancerName, 'k8s-default-app')])" \
+            --output text)" = "0" ] && [ "$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=k8s-*" \
+            --query "length(SecurityGroups)" --output text)" = "0" ]; do
+            echo "waiting for the ALB controller to finish cleaning up..."
+            sleep 10
+          done
+
+      - name: terraform destroy
+        run: terraform destroy -auto-approve
+
+  dns-record-apply:
+    if: inputs.action == 'dns-record-apply'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/dns-record
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.10.0"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      # Separate action, not chained after the main apply: the ALB is
+      # provisioned asynchronously after the Ingress is created, so there's
+      # no reliable point in the same run to know it actually exists yet.
+      # Run this once `kubectl get ingress app` shows an ADDRESS.
+      - run: terraform init
+
+      - run: terraform apply -auto-approve
