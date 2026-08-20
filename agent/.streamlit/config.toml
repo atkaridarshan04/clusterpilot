@@ -1,0 +1,10 @@
+# "Mission control" theme, built around the live (blue) vs. history (violet)
+# split the whole agent is organized around - see the badge colors in app.py,
+# which reuse these same two hues on purpose.
+[theme]
+base = "dark"
+primaryColor = "#4FA8FF"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#121B30"
+textColor = "#E3EAF5"
+font = "sans serif"
