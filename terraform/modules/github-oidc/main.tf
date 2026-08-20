@@ -41,14 +41,13 @@ data "aws_iam_policy_document" "assume_role_policy" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Scoped to this one repo - any ref/branch/PR/workflow_dispatch within
-    # it, but no other repo under the same GitHub account can assume this
-    # role. Narrow further to e.g. "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main"
-    # if only the default branch should ever be able to apply/destroy.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_owner}/${var.github_repo}:*"]
+      values = [
+        "repo:${var.github_owner}/${var.github_repo}:*",
+        "repo:${var.github_owner}@*/${var.github_repo}@*:*",
+      ]
     }
   }
 }

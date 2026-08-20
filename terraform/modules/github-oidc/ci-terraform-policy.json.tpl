@@ -11,7 +11,11 @@
         "autoscaling:*",
         "route53:*",
         "acm:*",
+        "ecr:*",
+        "ssm:*",
         "logs:*",
+        "rds:*",
+        "dynamodb:*",
         "cloudwatch:*",
         "sts:GetCallerIdentity"
       ],
@@ -55,6 +59,12 @@
       ]
     },
     {
+      "Sid": "EksOptimizedAmiLookup",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": "arn:aws:ssm:*::parameter/aws/service/eks/*"
+    },
+    {
       "Sid": "IamReadOnAnyPolicy",
       "Effect": "Allow",
       "Action": [
@@ -69,6 +79,7 @@
       "Action": [
         "s3:GetObject",
         "s3:PutObject",
+        "s3:DeleteObject",
         "s3:ListBucket",
         "s3:GetBucketVersioning"
       ],
