@@ -81,9 +81,9 @@ Solid arrows are `depends_on`/data dependencies within this one `apply`.
   Only the **public** half goes into Terraform; the private key stays on
   your machine and is never passed to `terraform`/committed anywhere.
 - A GitHub PAT, only if your fork is **private** - ArgoCD's repo-server
-  needs it to clone `k8s/`; a public fork clones anonymously instead. See
-  `variables.tf`'s `argocd_repo_token` - still a required input either way,
-  so pass any placeholder string if public.
+  needs it to clone `k8s/`. Leave `variables.tf`'s `argocd_repo_token`
+  unset for a public fork; ArgoCD then clones anonymously and no
+  credentials Secret gets created in the cluster at all.
 
 ## Local checks
 
@@ -152,15 +152,8 @@ cd ..
 terraform init      # migrates state into the S3 backend
 
 export TF_VAR_ssh_public_key="$(cat ~/.ssh/clusterpilot-bastion.pub)"
-export TF_VAR_argocd_repo_token="<your GitHub PAT>"
+export TF_VAR_argocd_repo_token="<your GitHub PAT>"   # Optional if repo is public, required if private
 
-# Cold start only (nothing exists yet): module.argocd's providers need
-# module.eks's real outputs to configure themselves, which don't exist
-# before the cluster does. Target both explicitly - module.eks alone only
-# pulls in the specific module.vpc outputs it reads (vpc_id, private/intra
-# subnets), not the NAT gateway/IGW/public subnets nodes need for internet
-# egress, since nothing in module.eks references those directly. A no-op
-# on every apply after the first.
 terraform plan  -target=module.vpc -target=module.eks
 terraform apply -target=module.vpc -target=module.eks
 
@@ -175,8 +168,7 @@ Observability addons (both via `modules/eks-addons`, both EKS-managed, both
 Pod Identity), Cluster Autoscaler (helm, Pod Identity), the `metrics-server`
 addon (needed for the HPA in
 `../k8s/policies.yaml` to read pod CPU), ArgoCD (see below), and the ACM
-cert for `wordpress.atkaridarshan04.online`. Also renders
-`../k8s/ingress.yaml` from the template with the real cert ARN baked in and
+cert for `wordpress.atkaridarshan04.online`. Also renders `../k8s/ingress.yaml` from the template with the real cert ARN baked in and
 applies it directly to the cluster (`kubectl_manifest.ingress`) - don't
 edit `ingress.yaml` directly, edit `ingress.yaml.tpl`. It's gitignored, so
 this is the one manifest ArgoCD never manages (see the ArgoCD section
@@ -197,14 +189,13 @@ enforced; without it they apply cleanly and do nothing.
 **Node capacity note:** pods/node is capped by the instance type's ENI/IP
 capacity, not `resources.requests` - see
 [`docs/concepts/cluster-autoscaling-and-pod-capacity.md`](../docs/concepts/cluster-autoscaling-and-pod-capacity.md)
-for the mechanics. Check `kubectl get nodes -o
-custom-columns=NAME:.metadata.name,ALLOCATABLE_PODS:.status.allocatable.pods`
+for the mechanics. Check `kubectl get nodes -o custom-columns=NAME:.metadata.name,ALLOCATABLE_PODS:.status.allocatable.pods`
 before adding workloads. `modules/cluster-autoscaler` scales the node
 group's ASG for unschedulable pods; `node_desired_size` in `locals.tf`
 only affects a fresh node group, not an existing one (the upstream EKS
 module ignores changes to it on purpose, so a running autoscaler doesn't
 fight Terraform over node count) - bump it live first if you need to raise it:
-```
+```bash
 aws eks update-nodegroup-config \
   --cluster-name clusterpilot \
   --nodegroup-name <name-from-terraform-error-or-`aws eks list-nodegroups`> \

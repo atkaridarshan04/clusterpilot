@@ -26,7 +26,7 @@ terraform {
 
   # bucket name comes from `terraform output state_bucket` in bootstrap/ - fill in after running bootstrap
   backend "s3" {
-    bucket       = "clusterpilot-tfstate-<AWS_ACCOUNT_ID>"
+    bucket       = "clusterpilot-tfstate-590183956795"
     key          = "clusterpilot/terraform.tfstate"
     region       = "ap-south-1"
     encrypt      = true

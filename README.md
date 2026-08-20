@@ -105,9 +105,9 @@ common except both touching `terraform/`:
 
 | Name | Kind | Where it comes from |
 |---|---|---|
-| `AWS_OIDC_ROLE_ARN` | Repo variable | `terraform/bootstrap`'s `github_actions_role_arn` output - see [`docs/concepts/github-actions-oidc.md`](docs/concepts/github-actions-oidc.md) |
-| `SSH_PUBLIC_KEY` | Repo secret | The bastion's public SSH key |
-| `ARGOCD_REPO_TOKEN` | Repo secret | A GitHub PAT - only actually used if your fork is private |
+| `AWS_OIDC_ROLE_ARN` | Repo variable, required | `terraform/bootstrap`'s `github_actions_role_arn` output - see [`docs/concepts/github-actions-oidc.md`](docs/concepts/github-actions-oidc.md) |
+| `SSH_PUBLIC_KEY` | Repo secret, required | The bastion's public SSH key |
+| `ARGOCD_REPO_TOKEN` | Repo secret, optional | A GitHub PAT - only needed if your fork is private; leave unset for a public fork and ArgoCD clones anonymously |
 
 Set these under **Settings -> Secrets and variables -> Actions**; the full
 walkthrough is in `terraform/README.md`'s "Bootstrap remote state and the

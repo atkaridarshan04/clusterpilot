@@ -25,7 +25,8 @@ permissions:
 jobs:
   # Repo secrets used by every job below (Settings -> Secrets and variables
   # -> Actions): SSH_PUBLIC_KEY, the bastion's public key; ARGOCD_REPO_TOKEN,
-  # a GitHub PAT (only actually needed if your fork is private). See
+  # a GitHub PAT - optional, only if your fork is private, leave unset for
+  # a public one. See
   # terraform/README.md's "One-time repo setup".
   plan:
     if: inputs.action == 'plan'

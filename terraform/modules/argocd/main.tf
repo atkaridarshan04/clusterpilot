@@ -17,7 +17,12 @@ resource "helm_release" "argocd" {
   })]
 }
 
+# Only created if a token was actually given - a public repo_url clones
+# anonymously, and ArgoCD needs no credentials for that at all. See
+# docs/concepts/gitops-with-argocd.md.
 resource "kubernetes_secret" "repo_creds" {
+  count = var.repo_token != "" ? 1 : 0
+
   metadata {
     name      = "clusterpilot-repo-creds"
     namespace = "argocd"

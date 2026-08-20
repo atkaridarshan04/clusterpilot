@@ -8,7 +8,8 @@ variable "ssh_public_key" {
 }
 
 variable "argocd_repo_token" {
-  description = "GitHub PAT for ArgoCD's repo-server to clone this repo - only actually needed if your fork is private (a public fork clones anonymously). Still a required input either way; pass any placeholder string if public."
+  description = "GitHub PAT for ArgoCD's repo-server to clone this repo - leave unset for a public fork, ArgoCD then clones anonymously and no k8s Secret gets created at all. Only needed if your fork is private."
   type        = string
   sensitive   = true
+  default     = ""
 }

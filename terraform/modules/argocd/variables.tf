@@ -15,9 +15,10 @@ variable "repo_revision" {
 }
 
 variable "repo_token" {
-  description = "GitHub PAT for cloning repo_url - stored as a k8s Secret, never in a manifest. Only needed if repo_url is private, see root variables.tf"
+  description = "GitHub PAT for cloning repo_url, stored as a k8s Secret, never in a manifest. Leave empty (the default) for a public repo_url - no Secret gets created at all, and ArgoCD clones it anonymously"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "admin_password_bcrypt_hash" {

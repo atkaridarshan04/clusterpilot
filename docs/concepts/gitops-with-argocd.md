@@ -1,5 +1,16 @@
 # GitOps with ArgoCD
 
+## Credentials are optional, not just placeholder-able
+
+`terraform/modules/argocd`'s `kubernetes_secret.repo_creds` only gets
+created when `repo_token` is actually set (`count = var.repo_token != "" ?
+1 : 0`) - for a public `repo_url`, ArgoCD's repo-server clones it
+anonymously over plain HTTPS, the same as any public git clone, so there's
+no credential to store in the first place. Leaving `argocd_repo_token`
+unset (its default) for a public fork means no bogus placeholder Secret
+sits in the cluster providing no actual security value - the token is only
+created, and only needed, once `repo_url` points at a private repo.
+
 ## What ArgoCD owns here
 
 `terraform/modules/argocd` installs ArgoCD (a lightweight profile - no
