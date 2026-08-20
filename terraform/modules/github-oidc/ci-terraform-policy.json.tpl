@@ -60,6 +60,23 @@
       ]
     },
     {
+      "Sid": "EksNodegroupServiceLinkedRoleRead",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
+    },
+    {
+      "Sid": "EksNodegroupServiceLinkedRoleCreate",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "*",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "eks-nodegroup.amazonaws.com"
+        }
+      }
+    },
+    {
       "Sid": "IamReadOnAnyPolicy",
       "Effect": "Allow",
       "Action": [
