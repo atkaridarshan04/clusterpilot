@@ -1,0 +1,29 @@
+# Terraform
+.terraform/
+.terraformrc
+terraform.rc
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+*tfplan*
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# This repo's own generated artifacts
+k8s/ingress.yaml
+terraform/checkov-results.sarif
+
+# Python / agent
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.log
+
+# OS / editor
+.DS_Store
