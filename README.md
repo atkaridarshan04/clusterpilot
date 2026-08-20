@@ -162,3 +162,5 @@ before pushing.
 The standalone chat agent ([`agent/README.md`](agent/README.md)) answers a
 question with a visible tool call, reaching live cluster state and
 CloudWatch history in one conversation.
+
+![The agent's landing screen, with suggested questions against live cluster state and CloudWatch history](docs/assets/agent.png)
