@@ -32,8 +32,8 @@ locals {
   # bcrypt hash of "admin123" - htpasswd -nbBC 10 "" admin123, leading colon dropped
   argocd_admin_password_bcrypt_hash = "$2y$10$FZUwwK/ouAWUsPsX9KaCresWC9dpDMYWRIanSOMx.2WJKt7Nw//zO"
 
-  dns_zone_name = "atkaridarshan04.online"
-  domain_name   = "wordpress.atkaridarshan04.online"
+  dns_zone_name = "atkaridarshan.online"
+  domain_name   = "wordpress.atkaridarshan.online"
 
   tags = {
     Name      = "clusterpilot"

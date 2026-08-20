@@ -11,7 +11,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: wordpress.atkaridarshan04.online
+    - host: wordpress.atkaridarshan.online
       http:
         paths:
           - path: /

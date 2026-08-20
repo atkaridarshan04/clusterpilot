@@ -61,7 +61,7 @@ question. Revisit if that latency ever actually matters.
 
 ## 1. Install dependencies
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
@@ -84,7 +84,7 @@ quickstart above needs zero extra IAM setup; wire it in and pass its
 want the agent running under its own least-privilege identity instead of
 your own.
 
-```
+```bash
 export OPENAI_API_KEY="sk-..."
 export AWS_PROFILE=<your AWS profile>
 
@@ -96,7 +96,7 @@ from PyPI via `uvx` - needs internet, takes a few seconds, one-time.
 
 Good test questions:
 
-```
+```text
 What's the memory request and limit configured on the wordpress deployment?          # live
 Has the ContainerInsights cluster_node_count metric changed in the last few hours?   # history
 Were there any node drains, evictions, or scheduling failures recently?       # history

@@ -9,7 +9,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket       = "clusterpilot-tfstate-<AWS_ACCOUNT_ID>"
+    bucket       = "clusterpilot-tfstate-590183956795"
     key          = "clusterpilot/dns-record.tfstate"
     region       = "ap-south-1"
     encrypt      = true

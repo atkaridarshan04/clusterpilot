@@ -77,7 +77,11 @@ module "argocd" {
   repo_token                 = var.argocd_repo_token
   admin_password_bcrypt_hash = local.argocd_admin_password_bcrypt_hash
 
-  depends_on = [module.eks]
+  # ArgoCD's own Helm chart creates several Services (argocd-server,
+  # argocd-repo-server, argocd-redis, ...) - same admission-webhook race as
+  # module.eks_addons, needs the ALB controller actually serving, not just
+  # started. See docs/concepts/alb-networking-and-network-policy.md.
+  depends_on = [module.eks, module.ingress_controller]
 }
 
 module "dns" {

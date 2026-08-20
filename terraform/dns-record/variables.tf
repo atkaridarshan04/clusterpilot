@@ -7,13 +7,13 @@ variable "region" {
 variable "zone_name" {
   description = "Existing public Route53 hosted zone name"
   type        = string
-  default     = "atkaridarshan04.online"
+  default     = "atkaridarshan.online"
 }
 
 variable "domain_name" {
-  description = "Fully-qualified domain name to point at the ALB"
+  description = "Fully-qualified domain name to point at the ALB - must end in zone_name's own domain, or Route53 silently treats it as relative and appends the zone name (e.g. domain_name=\"a.wrong-domain.com\" with zone_name=\"real-domain.com\" creates \"a.wrong-domain.com.real-domain.com\", not an error)"
   type        = string
-  default     = "wordpress.atkaridarshan04.online"
+  default     = "wordpress.atkaridarshan.online"
 }
 
 variable "cluster_name" {
