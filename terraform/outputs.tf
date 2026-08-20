@@ -35,3 +35,8 @@ output "bastion_public_ip" {
   description = "SSH target - `ssh -i <private-key> ec2-user@<this>`"
   value       = module.bastion.public_ip
 }
+
+# Uncomment along with module.agent_role in main.tf.
+# output "agent_role_arn" {
+#   value = module.agent_role.role_arn
+# }

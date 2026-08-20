@@ -341,8 +341,8 @@ covers the local chat agent that can actually query it (plus live cluster
 state) - no separate IAM setup needed, it uses whatever AWS profile your
 `aws`/`kubectl` sessions already authenticate with. `modules/agent-role`
 is the least-privilege role scoped to exactly what the agent needs
-instead - not wired into `main.tf` by default, see `../agent/README.md`
-for when to use it.
+instead - commented out in `main.tf`/`outputs.tf` by default, see
+`../agent/README.md` for when and how to turn it on.
 
 ## 9. Tear down
 

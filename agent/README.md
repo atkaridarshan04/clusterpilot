@@ -78,11 +78,26 @@ addons' own Pod Identity roles carry; a personal profile with broad `logs:*`
 access covers this without extra setup.
 `../terraform/modules/agent-role` is the least-privilege role for this
 agent specifically (scoped to exactly the read actions it needs, see its
-`eks-mcp-iam-policy.json`) - not wired into `main.tf` by default so the
-quickstart above needs zero extra IAM setup; wire it in and pass its
-`role_arn` via `AWS_PROFILE`/an assumed-role credential process once you
-want the agent running under its own least-privilege identity instead of
-your own.
+`eks-mcp-iam-policy.json`) - commented out in `../terraform/main.tf`/
+`outputs.tf` by default so the quickstart above needs zero extra IAM
+setup. To run the agent under it instead of your own profile:
+
+1. Uncomment `module "agent_role"` in `../terraform/main.tf` and the
+   matching `agent_role_arn` output in `../terraform/outputs.tf`, then
+   `terraform apply` (from `../terraform/`, same profile you've been
+   running the rest of this project's applies with - the role's trust
+   policy only allows *that* identity to assume it).
+2. `terraform output agent_role_arn` and add an assume-role profile in
+   `~/.aws/config`:
+   ```ini
+   [profile clusterpilot-agent]
+   role_arn       = <output above>
+   source_profile = <the profile you applied with>
+   region         = ap-south-1
+   ```
+3. `export AWS_PROFILE=clusterpilot-agent` before `streamlit run app.py` -
+   `agent_core.py` needs no code change, it already just inherits
+   whatever `AWS_PROFILE` is active.
 
 ```bash
 export OPENAI_API_KEY="sk-..."

@@ -70,6 +70,15 @@ module "bastion" {
   depends_on = [module.eks]
 }
 
+# Least-privilege role for ../agent/ - uncomment (and the matching output
+# in outputs.tf) to run the agent under its own scoped-down identity
+# instead of your own AWS profile. See ../agent/README.md step 2.
+# module "agent_role" {
+#   source       = "./modules/agent-role"
+#   cluster_name = local.name
+#   tags         = local.tags
+# }
+
 module "argocd" {
   source                     = "./modules/argocd"
   repo_url                   = local.argocd_repo_url
