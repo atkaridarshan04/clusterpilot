@@ -1,12 +1,15 @@
 # clusterpilot
 
-An EKS platform built entirely from infrastructure-as-code - network,
-cluster, and a sample application - plus an AI agent that can answer
-"what's happening on this cluster right now" against both live cluster
-state and its CloudWatch history, and cluster operations built on AWS best
-practices: EKS Pod Identity-scoped IAM per addon, GitOps deploys, cluster
-autoscaling, policy-as-code CI, and short-lived OIDC credentials for CI
-instead of any long-lived AWS key.
+A production-grade EKS platform built entirely from infrastructure-as-code
+- network, cluster, and a sample application - with CI/CD and cluster
+operations built on AWS/GitOps best practices: EKS Pod Identity-scoped IAM
+per addon, GitOps deploys via ArgoCD, cluster autoscaling, policy-as-code
+CI (checkov/tflint), and short-lived OIDC credentials for CI instead of any
+long-lived AWS key.
+
+On top of that platform: an AI agent that can answer "what's happening on
+this cluster right now" against both live cluster state and its CloudWatch
+history.
 
 ## Layout
 
