@@ -16,6 +16,7 @@
         "logs:*",
         "rds:*",
         "dynamodb:*",
+        "kms:*",
         "cloudwatch:*",
         "sts:GetCallerIdentity"
       ],
@@ -57,12 +58,6 @@
         "arn:aws:iam::*:instance-profile/${name}*",
         "arn:aws:iam::*:policy/*${name}*"
       ]
-    },
-    {
-      "Sid": "EksOptimizedAmiLookup",
-      "Effect": "Allow",
-      "Action": "ssm:GetParameter",
-      "Resource": "arn:aws:ssm:*::parameter/aws/service/eks/*"
     },
     {
       "Sid": "IamReadOnAnyPolicy",
