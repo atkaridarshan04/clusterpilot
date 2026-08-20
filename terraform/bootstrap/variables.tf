@@ -22,6 +22,18 @@ variable "github_repo" {
   default     = "clusterpilot"
 }
 
+variable "create_github_oidc_provider" {
+  description = "Set false if this AWS account already has a GitHub Actions OIDC provider from another project - it's account-wide (one per account per issuer URL), not per-repo, so AWS rejects a second one. Pass its ARN via existing_github_oidc_provider_arn instead"
+  type        = bool
+  default     = true
+}
+
+variable "existing_github_oidc_provider_arn" {
+  description = "ARN of an existing GitHub Actions OIDC provider, e.g. arn:aws:iam::<account-id>:oidc-provider/token.actions.githubusercontent.com - required when create_github_oidc_provider is false"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Tags applied to bootstrap resources"
   type        = map(string)

@@ -131,6 +131,20 @@ has to be pasted in literally). Set the role ARN as a repo variable so the
 CI workflows can assume it: **Settings -> Secrets and variables -> Actions
 -> Variables -> New repository variable**, name `AWS_OIDC_ROLE_ARN`.
 
+**If this fails with `EntityAlreadyExists` on the OIDC provider:** the
+GitHub Actions OIDC provider is account-wide, not per-repo - AWS allows
+only one per (account, issuer URL), so if any other project in this AWS
+account has ever set up GitHub Actions OIDC before, one already exists.
+Reuse it instead of creating a second one:
+
+```bash
+terraform apply \
+  -var="github_owner=<your-github-username>" \
+  -var="github_repo=clusterpilot" \
+  -var="create_github_oidc_provider=false" \
+  -var="existing_github_oidc_provider_arn=arn:aws:iam::<account-id>:oidc-provider/token.actions.githubusercontent.com"
+```
+
 ## 2. Init & apply the main infra
 
 ```bash

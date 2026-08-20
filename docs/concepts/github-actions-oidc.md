@@ -55,6 +55,18 @@ step that creates the Terraform state bucket):
    `repo:<owner>/<repo>:ref:refs/heads/main` if only the default branch
    should ever be allowed to apply/destroy infrastructure.)
 
+The provider itself is account-wide, not per-repo - AWS allows only one
+`aws_iam_openid_connect_provider` per (account, issuer URL), and every
+GitHub repo shares the same issuer. If any other project in this AWS
+account has ever set up GitHub Actions OIDC before, one already exists,
+and creating a second one fails with `EntityAlreadyExists`.
+`terraform/modules/github-oidc` handles this via a `create_oidc_provider`
+toggle - set it (and `bootstrap/`'s matching
+`create_github_oidc_provider`) to `false` and pass the existing
+provider's ARN instead of creating a duplicate. The IAM *role* above it
+is still created fresh per project, since its trust policy is scoped to
+one specific repo.
+
 The workflows (`.github/workflows/terraform-infra.yml`,
 `terraform-lint.yml`) then use
 [`aws-actions/configure-aws-credentials`](https://github.com/aws-actions/configure-aws-credentials)

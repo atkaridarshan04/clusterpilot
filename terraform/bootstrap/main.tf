@@ -58,10 +58,12 @@ resource "aws_s3_bucket_public_access_block" "tfstate" {
 # above - creates the GitHub OIDC provider + IAM role the CI workflows
 # assume afterward. See ../../docs/concepts/github-actions-oidc.md.
 module "github_oidc" {
-  source           = "../modules/github-oidc"
-  name             = var.name
-  github_owner     = var.github_owner
-  github_repo      = var.github_repo
-  state_bucket_arn = aws_s3_bucket.tfstate.arn
-  tags             = var.tags
+  source                     = "../modules/github-oidc"
+  name                       = var.name
+  github_owner               = var.github_owner
+  github_repo                = var.github_repo
+  state_bucket_arn           = aws_s3_bucket.tfstate.arn
+  create_oidc_provider       = var.create_github_oidc_provider
+  existing_oidc_provider_arn = var.existing_github_oidc_provider_arn
+  tags                       = var.tags
 }
